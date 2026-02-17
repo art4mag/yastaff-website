@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ru" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Аутсорсинг персонала | Надежный партнер</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { font-family: 'Montserrat', sans-serif; background-color: #f8fafc; color: #0f172a; overflow-x: hidden; }
+        .modal-overlay { position: fixed; inset: 0; z-index: 100; display: none; align-items: center; justify-content: center; padding: 1rem; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(12px); opacity: 0; transition: opacity 0.4s ease; }
+        .modal-overlay.active { display: flex; opacity: 1; }
+        .modal-box { transform: scale(0.95) translateY(30px); opacity: 0; transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); max-height: 90vh; overflow-y: auto; }
+        .modal-overlay.active .modal-box { transform: scale(1) translateY(0); opacity: 1; }
+        .reveal { opacity: 0; transform: translateY(40px); transition: all 1s cubic-bezier(0.22, 1, 0.36, 1); }
+        .reveal.active { opacity: 1; transform: translateY(0); }
+        .blob { position: absolute; width: 600px; height: 600px; background: linear-gradient(180deg, rgba(2, 132, 199, 0.1) 0%, rgba(234, 88, 12, 0.05) 100%); filter: blur(100px); border-radius: 50%; z-index: -1; animation: float 25s infinite alternate; }
+        @keyframes float { from { transform: translate(-10%, -10%); } to { transform: translate(10%, 10%); } }
+        @media (max-width: 768px) { h1 { font-size: 1.8rem !important; } }
+        .admin-mode [contenteditable="true"]:hover { outline: 2px dashed #0284c7; background: rgba(2, 132, 199, 0.05); border-radius: 8px; }
+        .admin-mode [data-edit^="media"]:hover { outline: 4px dashed #0284c7; outline-offset: -4px; cursor: pointer; filter: brightness(0.8); }
+        .section-controls { display: none; } .admin-mode .builder-section:hover .section-controls { display: flex; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        @keyframes fadeInSlide { from { opacity: 0; transform: scale(1.02); } to { opacity: 1; transform: scale(1); } }
+        .animate-fade-in { animation: fadeInSlide 0.6s ease-out forwards; }
+    </style>
+</head>
+<body class="antialiased flex flex-col min-h-screen">
+    <div class="blob" style="top: -200px; left: -200px;"></div>
+    <div class="blob" style="top: 40%; right: -300px; animation-delay: -5s;"></div>
+
+    <div id="loginOverlay" class="fixed inset-0 z-[200] bg-slate-900 flex items-center justify-center hidden p-4 backdrop-blur-xl">
+        <div class="bg-white w-full max-w-sm rounded-[2.5rem] p-10 shadow-2xl text-center">
+            <h2 class="text-xl font-black mb-6 uppercase tracking-widest text-slate-800">Вход в панель</h2>
+            <div class="space-y-4">
+                <input id="lUser" type="text" placeholder="Логин" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+                <input id="lPass" type="password" placeholder="Пароль" class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-6 py-4 font-bold outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+                <button onclick="checkAuth()" class="w-full bg-blue-600 text-white rounded-2xl py-4 font-black uppercase text-xs tracking-widest hover:bg-blue-700 hover:shadow-2xl transition-all">Войти</button>
+            </div>
+            <p id="lErr" class="text-red-500 text-[10px] mt-4 font-bold uppercase hidden">Ошибка входа</p>
+        </div>
+    </div>
+
+    <nav class="fixed top-0 w-full z-40 bg-white/90 backdrop-blur-md py-4 border-b border-slate-200 shadow-sm transition-all duration-500">
+        <div class="max-w-7xl mx-auto px-4 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center overflow-hidden" data-edit="media-logo" id="navLogoImgContainer"></div>
+                <div id="navLogoText" data-field="navLogoText" class="text-[10px] sm:text-xs font-black uppercase leading-tight text-slate-800" contenteditable="false">Надежный партнер</div>
+            </div>
+            <div class="hidden lg:flex gap-10 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                <a href="#s_hero_pic" class="hover:text-blue-600 transition-colors">Аутсорсинг</a>
+                <a href="#s_benefits" class="hover:text-blue-600 transition-colors">Выгоды</a>
+                <a href="#s_about" class="hover:text-blue-600 transition-colors">О нас</a>
+                <a href="#s_contacts_fixed" class="hover:text-blue-600 transition-colors">Контакты</a>
+            </div>
+            <div class="flex items-center gap-5">
+                <div id="socialLinksContainer" class="flex gap-2"></div>
+                <div id="phone" data-field="phone" contenteditable="false" class="text-slate-900 font-extrabold hidden sm:block">+7 908 846 75 75</div>
+                <button onclick="openFormModal('Заказ звонка (Шапка)')" class="bg-blue-600 text-white px-6 py-3 rounded-xl uppercase text-[10px] font-black hover:bg-blue-700 shadow-lg transition-all">Звонок</button>
+            </div>
+        </div>
+    </nav>
+    
+    <div id="pageBuilder" class="flex-grow w-full pt-28"></div>
+
+    <footer class="bg-slate-900 text-slate-400 py-10 border-t-4 border-blue-600 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center text-[10px] uppercase font-bold gap-6 tracking-widest text-center">
+            <div id="footerText" data-field="footerText" contenteditable="false">ООО ГК “Надежный Партнер”</div>
+            <button onclick="openPrivacy()" class="hover:text-white underline underline-offset-4">Политика конфиденциальности</button>
+        </div>
+    </footer>
+
+    <div id="addSectionPanel" class="hidden fixed bottom-10 left-10 z-50 group">
+        <button class="bg-[#ea580c] text-white w-16 h-16 rounded-3xl shadow-2xl flex items-center justify-center hover:rotate-90 transition-all duration-500"><i data-lucide="plus" class="w-8 h-8"></i></button>
+        <div class="absolute bottom-20 left-0 flex flex-col gap-3 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all translate-y-4 group-hover:translate-y-0">
+            <button onclick="addSection('hero_pic')" class="bg-white border p-4 rounded-2xl text-[9px] font-black uppercase tracking-widest shadow-2xl hover:bg-blue-50">📸 Главный</button>
+            <button onclick="addSection('problems')" class="bg-white border p-4 rounded-2xl text-[9px] font-black uppercase tracking-widest shadow-2xl hover:bg-blue-50">📋 Сложности</button>
+            <button onclick="addSection('services')" class="bg-white border p-4 rounded-2xl text-[9px] font-black uppercase tracking-widest shadow-2xl hover:bg-blue-50">💼 Услуги</button>
+            <button onclick="addSection('benefits')" class="bg-white border p-4 rounded-2xl text-[9px] font-black uppercase tracking-widest shadow-2xl hover:bg-blue-50">⭐ Выгоды</button>
+            <button onclick="addSection('about')" class="bg-white border p-4 rounded-2xl text-[9px] font-black uppercase tracking-widest shadow-2xl hover:bg-blue-50">🏢 О компании</button>
+            <button onclick="addSection('documents')" class="bg-white border p-4 rounded-2xl text-[9px] font-black uppercase tracking-widest shadow-2xl hover:bg-blue-50">📄 Документы</button>
+            <button onclick="addSection('contacts')" class="bg-white border p-4 rounded-2xl text-[9px] font-black uppercase tracking-widest shadow-2xl hover:bg-blue-50">📞 Контакты</button>
+        </div>
+    </div>
+
+    <div id="applyModal" class="modal-overlay">
+        <div class="modal-box bg-white w-full max-w-sm rounded-[3rem] p-10 relative shadow-2xl">
+            <button onclick="closeModal('applyModal')" class="absolute top-6 right-6 text-slate-400 p-2 hover:bg-slate-100 rounded-full transition-all"><i data-lucide="x" class="w-4 h-4"></i></button>
+            <h3 class="text-xl font-black uppercase mb-2 text-slate-900" id="modalSource">Заявка</h3>
+            <p class="text-slate-400 mb-8 text-[10px] font-bold uppercase tracking-widest">Перезвоним в течение 5 минут</p>
+            <form onsubmit="submitApp(event, document.getElementById('modalSource').innerText)" class="flex flex-col gap-4">
+                <input type="tel" required placeholder="Ваш телефон" class="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-6 py-5 text-sm font-bold outline-none focus:border-blue-600 transition-all">
+                <button type="submit" class="w-full bg-blue-600 text-white rounded-2xl py-5 font-black uppercase text-[10px] tracking-widest hover:bg-blue-700 transition-all shadow-md">Отправить</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="serviceDetailsModal" class="modal-overlay">
+        <div class="modal-box bg-white w-full max-w-xl rounded-[3rem] p-10 relative flex flex-col max-h-[85vh] shadow-2xl">
+            <button onclick="closeServiceDetails()" class="absolute top-8 right-8 text-slate-400 p-2 hover:bg-slate-100 rounded-full transition-all"><i data-lucide="x" class="w-5 h-5"></i></button>
+            <h3 id="sdTitle" class="text-2xl font-black uppercase mb-8 text-blue-600 border-b pb-6 pr-10">Заголовок</h3>
+            <div id="sdContent" class="text-slate-600 font-medium space-y-3 overflow-y-auto hide-scrollbar pr-4 text-sm md:text-base leading-relaxed"></div>
+            <div id="sdAdminHint" class="hidden mt-6 pt-4 border-t text-[10px] font-black uppercase text-orange-500 text-center">Редактирование активно.</div>
+        </div>
+    </div>
+
+    <div id="settingsModal" class="modal-overlay">
+        <div class="modal-box bg-white w-full max-w-lg rounded-[3rem] p-10 relative shadow-2xl">
+            <button onclick="closeModal('settingsModal')" class="absolute top-8 right-8 text-gray-400 p-2 hover:bg-slate-100 rounded-full transition-all"><i data-lucide="x"></i></button>
+            <h3 class="text-2xl font-black mb-10 uppercase tracking-tighter">Настройки</h3>
+            <div class="space-y-6">
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="text-[9px] font-black uppercase mb-2 block text-slate-400">Bot Token</label><input id="setTok" type="text" class="w-full border-2 border-slate-100 px-4 py-3 rounded-xl text-xs font-bold"></div>
+                    <div><label class="text-[9px] font-black uppercase mb-2 block text-slate-400">Chat ID</label><input id="setChat" type="text" class="w-full border-2 border-slate-100 px-4 py-3 rounded-xl text-xs font-bold"></div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="text-[9px] font-black uppercase mb-2 block text-slate-400">Telegram Link</label><input id="setTg" type="text" class="w-full border-2 border-slate-100 px-4 py-3 rounded-xl text-xs font-bold"></div>
+                    <div><label class="text-[9px] font-black uppercase mb-2 block text-slate-400">WhatsApp Link</label><input id="setWa" type="text" class="w-full border-2 border-slate-100 px-4 py-3 rounded-xl text-xs font-bold"></div>
+                </div>
+                <div class="p-5 bg-orange-50 rounded-2xl border border-orange-100">
+                    <label class="text-[9px] font-black uppercase mb-2 block text-orange-700">Политика (PDF/Word)</label>
+                    <input type="file" id="privacyUpload" class="text-[10px] font-bold">
+                </div>
+                <button onclick="saveSettings()" class="w-full bg-slate-900 text-white py-5 rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-black transition-all">Сохранить</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="privacyModal" class="modal-overlay">
+        <div class="modal-box bg-white w-full max-w-5xl h-[85vh] rounded-[2.5rem] p-4 relative flex flex-col shadow-2xl">
+            <button onclick="closeModal('privacyModal')" class="absolute top-2 right-2 bg-slate-100 p-2 rounded-full hover:bg-red-500 hover:text-white transition-all"><i data-lucide="x"></i></button>
+            <iframe id="privacyIframe" src="" class="w-full h-full rounded-2xl bg-slate-50 mt-10 border-none shadow-inner"></iframe>
+        </div>
+    </div>
+
+    <script>
+        function openModal(id) { const el = document.getElementById(id); if(el) { el.classList.add('active'); document.body.style.overflow = 'hidden'; } }
+        function closeModal(id) { const el = document.getElementById(id); if(el) { el.classList.remove('active'); document.body.style.overflow = ''; } }
+        function openFormModal(src) { document.getElementById('modalSource').innerText = src; openModal('applyModal'); }
+
+        const isAdmin = window.location.pathname === '/admin';
+        const isAuth = localStorage.getItem('site_auth') === 'true';
+
+        if (isAdmin && !isAuth) {
+            document.getElementById('loginOverlay').classList.remove('hidden');
+        } else if (isAdmin && isAuth) {
+            document.body.classList.add('admin-mode');
+            document.getElementById('addSectionPanel').classList.remove('hidden');
+            initAdminUI();
+        }
+
+        function checkAuth() {
+            const u = document.getElementById('lUser').value; const p = document.getElementById('lPass').value;
+            if (u === 'admin' && p === 'admin') { localStorage.setItem('site_auth', 'true'); location.reload(); }
+            else document.getElementById('lErr').classList.remove('hidden');
+        }
+
+        function initAdminUI() {
+            const sBtn = document.createElement('button'); sBtn.innerHTML = '<i data-lucide="save"></i> Сохранить'; sBtn.className = 'fixed bottom-10 right-10 bg-[#ea580c] text-white px-8 py-5 rounded-full shadow-2xl font-black uppercase text-[10px] tracking-widest z-[90] flex items-center gap-3 hover:scale-105 transition-all';
+            sBtn.onclick = async () => { sBtn.innerHTML = 'Сохранение...'; gatherData(); await fetch('/api/data', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(siteData) }); location.reload(); };
+            document.body.appendChild(sBtn);
+
+            const setBtn = document.createElement('button'); setBtn.innerHTML = '<i data-lucide="settings"></i>'; setBtn.className = 'fixed bottom-10 right-56 bg-slate-900 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center z-[90] hover:rotate-90 transition-all';
+            setBtn.onclick = () => { 
+                document.getElementById('setTok').value = siteData.settings.telegramToken||''; document.getElementById('setChat').value = siteData.settings.telegramChatId||''; document.getElementById('setTg').value = siteData.settings.tgLink||''; document.getElementById('setWa').value = siteData.settings.waLink||''; openModal('settingsModal'); 
+            };
+            document.body.appendChild(setBtn);
+        }
+
+        let siteData = { sections: [], settings: {} };
+        let activeServiceIdx = null; let activeServiceSecId = null;
+
+        // ШАБЛОНЫ (С ВОССТАНОВЛЕННЫМИ КНОПКАМИ ДОБАВЛЕНИЯ)
+        const templates = {
+            hero_pic: (d) => `<section id="${d.id}" class="max-w-7xl mx-auto px-4 py-12 md:py-20 flex flex-col lg:flex-row gap-12 lg:gap-16 items-center"><div class="w-full lg:w-[55%] reveal"><div class="inline-block bg-blue-100 text-blue-700 text-[10px] font-black uppercase px-4 py-2 rounded-full mb-6 tracking-widest shadow-sm">Аутсорсинг персонала</div><h1 data-field="title" class="text-3xl md:text-[52px] font-black uppercase leading-[1.1] mb-8 text-slate-900" contenteditable="${isAdmin}">${d.title}</h1><p data-field="desc" class="text-sm md:text-base font-medium text-slate-500 mb-10 leading-relaxed max-w-md border-l-4 border-blue-600 pl-6" contenteditable="${isAdmin}">${d.desc}</p><div class="bg-white p-8 rounded-[3rem] shadow-2xl border border-slate-50 relative"><p data-field="formTitle" class="text-[10px] text-orange-500 font-black uppercase mb-6 tracking-widest" contenteditable="${isAdmin}">${d.formTitle}</p><form onsubmit="submitApp(event, 'Главный экран')" class="flex flex-col sm:flex-row gap-4"><input type="tel" required placeholder="Ваш телефон" class="flex-grow border-2 border-slate-100 bg-slate-50 rounded-2xl px-6 py-5 text-sm font-bold outline-none focus:border-blue-600 transition-all"><button type="submit" class="bg-blue-600 text-white px-10 py-5 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/20">Отправить</button></form></div></div><div class="w-full lg:w-[45%] reveal" style="transition-delay:300ms"><div class="aspect-square rounded-[4rem] overflow-hidden shadow-2xl relative group" data-edit="media" data-src="${d.media}">${renderMedia(d.media, 'w-full h-full object-cover transition-transform duration-700 group-hover:scale-110')}</div></div></section>`,
+            
+            problems: (d) => `<section id="${d.id}" class="py-24 bg-slate-50 border-y border-slate-200/60"><div class="max-w-7xl mx-auto px-4"><h2 data-field="title" class="text-2xl md:text-3xl font-black uppercase text-center mb-16 reveal" contenteditable="${isAdmin}">${d.title}</h2><div class="grid grid-cols-1 md:grid-cols-3 gap-8" id="grid-${d.id}">${(d.items||[]).map((i, idx) => `<div class="bg-white rounded-[2rem] p-10 shadow-sm border border-slate-100 relative group flex flex-col reveal hover:shadow-2xl transition-all" style="transition-delay:${idx*150}ms" data-idx="${idx}">${isAdmin?`<button onclick="rmItem('${d.id}',${idx})" class="absolute top-4 right-4 text-red-500 z-20 bg-red-50 p-2 rounded-xl hover:bg-red-500 hover:text-white transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`:''}<div data-item="tag" class="bg-blue-50 text-blue-600 text-[10px] font-black uppercase px-4 py-2 rounded-xl inline-block self-start mb-10 tracking-wider" contenteditable="${isAdmin}">${i.tag}</div><h3 data-item="title" class="text-slate-900 font-black uppercase text-sm mb-4 leading-tight" contenteditable="${isAdmin}">${i.title}</h3><p data-item="desc" class="text-[13px] font-medium text-slate-500 mb-8 flex-grow leading-relaxed" contenteditable="${isAdmin}">${i.desc}</p><div class="bg-orange-50/50 rounded-xl p-5 border border-orange-100"><p data-item="alert" class="text-orange-600 text-[9px] font-black uppercase" contenteditable="${isAdmin}">${i.alert}</p></div></div>`).join('')}${isAdmin?`<div onclick="addItem('${d.id}')" class="bg-transparent border-2 border-dashed border-slate-300 rounded-[2rem] p-10 flex flex-col items-center justify-center text-slate-400 cursor-pointer hover:border-blue-500 hover:text-blue-500 transition-all font-black uppercase tracking-widest text-xs"><i data-lucide="plus" class="w-8 h-8 mb-2"></i>Добавить</div>`:''}</div></div></section>`,
+            
+            services: (d) => `<section id="${d.id}" class="py-24 bg-white"><div class="max-w-7xl mx-auto px-4 mb-16 reveal"><h2 data-field="title" class="text-3xl font-black uppercase text-slate-900 border-l-[12px] border-blue-600 pl-8 leading-none" contenteditable="${isAdmin}">${d.title}</h2></div><div class="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-10" id="grid-${d.id}">${(d.items||[]).map((i, idx) => `<div class="bg-[#f4f4f5] rounded-[2.5rem] pt-12 px-12 pb-0 relative group h-[380px] reveal overflow-hidden hover:bg-[#f0fdfa] transition-all duration-500" style="transition-delay:${idx*150}ms" data-idx="${idx}">${isAdmin?`<button onclick="rmItem('${d.id}',${idx})" class="absolute top-8 right-28 z-30 bg-white p-2 rounded-xl text-red-500 shadow-md hover:bg-red-500 hover:text-white transition-all"><i data-lucide="trash-2" class="w-5 h-5"></i></button>`:''}<button onclick="openServiceDetails('${d.id}', ${idx})" class="absolute top-8 right-8 bg-white w-14 h-14 rounded-3xl flex items-center justify-center text-orange-500 shadow-xl transition-all hover:bg-orange-500 hover:text-white z-20"><i data-lucide="plus" class="w-8 h-8"></i></button><h3 data-item="title" class="text-blue-600 font-black uppercase text-xl mb-4 w-3/4 leading-tight" contenteditable="${isAdmin}">${i.title}</h3><p data-item="desc" class="text-sm font-medium text-slate-400 mb-8 h-10 w-3/4" contenteditable="${isAdmin}">${i.desc}</p><div class="w-3/4 h-56 bg-slate-200 mt-auto ml-0 rounded-tr-[4rem] overflow-hidden shadow-2xl relative group-hover:scale-105 transition-transform" data-edit="media" data-src="${i.media}">${renderMedia(i.media, 'w-full h-full object-cover')}</div><div class="hidden" data-item="details">${i.details || ''}</div></div>`).join('')}${isAdmin?`<div onclick="addItemService('${d.id}')" class="bg-slate-50 rounded-[2.5rem] border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 cursor-pointer h-[380px] hover:border-blue-500 hover:text-blue-500 transition-all shadow-sm font-black uppercase tracking-widest text-xs"><i data-lucide="plus" class="w-10 h-10 mb-2"></i>Добавить услугу</div>`:''}</div></section>`,
+            
+            benefits: (d) => `<section id="${d.id}" class="py-32 bg-slate-900 text-white relative overflow-hidden"><div class="max-w-7xl mx-auto px-4 flex flex-col lg:flex-row gap-16 relative z-10 items-center"><div class="w-full lg:w-[40%] reveal"><h2 data-field="title" class="text-4xl md:text-6xl font-black uppercase leading-tight mb-10" contenteditable="${isAdmin}">${d.title}</h2><div class="w-32 h-3 bg-orange-500 rounded-full"></div></div><div class="w-full lg:w-[60%] flex flex-col gap-5" id="grid-${d.id}">${(d.items||[]).map((i, idx) => `<div class="bg-white/10 backdrop-blur-xl rounded-[2.5rem] p-10 flex items-start gap-10 relative group reveal hover:bg-white/20 transition-all duration-700 border border-white/10" style="transition-delay:${idx*200}ms" data-idx="${idx}">${isAdmin?`<button onclick="rmItem('${d.id}',${idx})" class="absolute top-6 right-6 z-20 bg-white/10 text-red-400 p-2 rounded-xl hover:bg-red-500 hover:text-white transition-all"><i data-lucide="trash-2" class="w-5 h-5"></i></button>`:''}<div class="bg-blue-600 w-20 h-20 rounded-3xl flex-shrink-0 flex items-center justify-center text-white shadow-2xl shadow-blue-600/40 transition-transform group-hover:scale-110" ${isAdmin?`onclick="chIcon('${d.id}',${idx})"`:''} data-icon="${i.icon}"><i data-lucide="${i.icon}" class="w-10 h-10"></i></div><div><h3 data-item="title" class="font-black text-xl uppercase mb-3 tracking-wide" contenteditable="${isAdmin}">${i.title}</h3><p data-item="desc" class="text-sm text-slate-400 font-medium leading-relaxed" contenteditable="${isAdmin}">${i.desc}</p></div></div>`).join('')}${isAdmin?`<div onclick="addItemBenefit('${d.id}')" class="border-2 border-dashed border-white/20 rounded-[2.5rem] p-10 flex flex-col items-center justify-center text-white/50 cursor-pointer hover:bg-white/10 hover:text-white transition-all font-black uppercase tracking-widest text-xs"><i data-lucide="plus" class="w-8 h-8 mb-2"></i>Добавить выгоду</div>`:''}</div></div></section>`,
+            
+            about: (d) => { const mArr = d.mediaList||['']; return `<section id="${d.id}" class="py-32 bg-white"><div class="max-w-7xl mx-auto px-4 flex flex-col lg:flex-row gap-20 items-center"><div class="w-full lg:w-[45%] flex flex-col gap-6 reveal"><div class="aspect-square bg-slate-900 rounded-[4rem] overflow-hidden shadow-2xl relative" id="slider-container-${d.id}"></div>${isAdmin?`<div class="bg-slate-50 p-4 rounded-3xl flex gap-4 overflow-x-auto hide-scrollbar border border-slate-100">${mArr.map((m, idx) => `<div class="w-20 h-20 flex-shrink-0 bg-slate-200 rounded-2xl overflow-hidden relative group cursor-pointer border-4 border-transparent hover:border-blue-500 transition-all" data-edit="media-arr" data-sec="${d.id}" data-idx="${idx}" data-src="${m}">${renderMedia(m, 'w-full h-full object-cover')}<button onclick="event.stopPropagation(); rmMediaAbout('${d.id}', ${idx})" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] hidden group-hover:flex shadow">✕</button></div>`).join('')}<div onclick="addMediaAbout('${d.id}')" class="w-20 h-20 flex-shrink-0 border-4 border-dashed border-slate-200 rounded-2xl flex items-center justify-center text-slate-300 cursor-pointer hover:bg-white hover:text-blue-500 transition-all"><i data-lucide="plus"></i></div></div>`:''}</div><div class="w-full lg:w-[55%] reveal" style="transition-delay:300ms"><h2 data-field="title" class="text-4xl font-black uppercase mb-10 text-slate-900" contenteditable="${isAdmin}">${d.title}</h2><p data-field="desc" class="text-base text-slate-500 font-medium mb-16 leading-[2] border-l-[12px] border-orange-500 pl-10" contenteditable="${isAdmin}">${d.desc}</p><div class="grid grid-cols-2 md:grid-cols-4 gap-10" id="grid-${d.id}">${(d.stats||[]).map((s, idx) => `<div class="relative group border-l-2 border-slate-100 pl-4" data-idx="${idx}">${isAdmin?`<button onclick="rmStat('${d.id}',${idx})" class="absolute -top-4 right-0 z-20 text-red-400 bg-red-50 p-1 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`:''}<div data-item="num" class="text-3xl md:text-4xl font-black text-blue-600 mb-2 tracking-tighter" contenteditable="${isAdmin}">${s.num}</div><div data-item="label" class="text-[10px] font-black uppercase text-slate-400 tracking-widest leading-tight" contenteditable="${isAdmin}">${s.label}</div></div>`).join('')}</div></div></div></section>` },
+            
+            documents: (d) => `<section id="${d.id}" class="py-24 bg-slate-50 overflow-hidden"><div class="max-w-7xl mx-auto px-4"><div class="flex justify-between items-end mb-16 reveal"><h2 data-field="title" class="text-2xl md:text-4xl font-black uppercase text-slate-900" contenteditable="${isAdmin}">${d.title}</h2><div class="flex gap-4"><button onclick="scrollCar('${d.id}', -1)" class="w-12 h-12 rounded-full bg-white shadow-md flex items-center justify-center text-slate-400 hover:text-blue-600 transition-all border border-slate-100"><i data-lucide="arrow-left"></i></button><button onclick="scrollCar('${d.id}', 1)" class="w-12 h-12 rounded-full bg-white shadow-md flex items-center justify-center text-slate-400 hover:text-blue-600 transition-all border border-slate-100"><i data-lucide="arrow-right"></i></button></div></div><div id="grid-${d.id}" class="flex overflow-x-auto snap-x snap-mandatory gap-8 hide-scrollbar scroll-smooth pb-10 px-4">${(d.items||[]).map((i, idx) => `<div class="flex-none w-[80%] sm:w-[calc(50%-16px)] lg:w-[calc(25%-24px)] snap-start relative group reveal" style="transition-delay:${idx*100}ms" data-idx="${idx}">${isAdmin?`<button onclick="event.stopPropagation(); rmItem('${d.id}',${idx})" class="absolute top-2 right-2 z-20 bg-red-50 text-red-500 p-2 rounded-xl shadow-lg flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"><i data-lucide="trash-2" class="w-4 h-4"></i></button>`:''}<div class="aspect-[1/1.41] bg-white rounded-[2.5rem] shadow-lg border border-slate-100 mb-6 overflow-hidden transition-all group-hover:-translate-y-2 group-hover:shadow-2xl" data-edit="media" data-src="${i.media}">${renderMedia(i.media, 'w-full h-full object-cover')}</div><h3 data-item="title" class="text-[13px] font-black uppercase text-slate-900 mb-1 leading-tight" contenteditable="${isAdmin}">${i.title}</h3><p data-item="desc" class="text-[10px] text-slate-400 font-bold uppercase tracking-widest" contenteditable="${isAdmin}">${i.desc}</p></div>`).join('')}${isAdmin?`<div onclick="addItemDoc('${d.id}')" class="flex-none w-[80%] sm:w-[calc(50%-16px)] lg:w-[calc(25%-24px)] aspect-[1/1.41] rounded-[2.5rem] border-2 border-dashed border-slate-300 flex flex-col items-center justify-center text-slate-400 cursor-pointer hover:border-blue-500 hover:text-blue-500 transition-all snap-start"><i data-lucide="plus" class="w-8 h-8 mb-2"></i><span class="text-[10px] font-black uppercase tracking-widest">Добавить документ</span></div>`:''}</div></div></section>`,
+            
+            contacts: (d) => `
+                <section id="${d.id}" class="w-full bg-white py-12 md:py-24">
+                    <div class="max-w-7xl mx-auto px-4">
+                        <div class="flex flex-col lg:flex-row shadow-[0_64px_128px_-24px_rgba(0,0,0,0.15)] rounded-[3rem] lg:rounded-[4rem] overflow-hidden reveal">
+                            <div class="w-full lg:w-3/5 bg-gradient-to-br from-blue-600 to-blue-700 text-white p-10 md:p-16 lg:p-24 relative overflow-hidden flex flex-col justify-center">
+                                <div class="absolute -top-20 -right-20 w-80 h-80 bg-white/10 rounded-full blur-3xl"></div>
+                                <h2 data-field="title" class="text-3xl lg:text-5xl font-black uppercase mb-8 leading-tight relative z-10" contenteditable="${isAdmin}">${d.title}</h2>
+                                <p data-field="desc" class="text-sm lg:text-base font-medium text-blue-50/80 mb-12 max-w-md relative z-10" contenteditable="${isAdmin}">${d.desc}</p>
+                                <form onsubmit="submitApp(event, 'Контакты')" class="flex flex-col sm:flex-row gap-4 relative z-10 w-full">
+                                    <input type="tel" required placeholder="Ваш телефон" class="flex-grow bg-white rounded-2xl text-slate-900 px-8 py-5 text-sm font-bold outline-none focus:ring-4 focus:ring-white/30 transition-all">
+                                    <button type="submit" class="bg-orange-500 text-white rounded-2xl px-10 py-5 font-black uppercase text-xs tracking-widest hover:bg-orange-600 transition-all">Перезвонить</button>
+                                </form>
+                            </div>
+                            <div class="w-full lg:w-2/5 bg-slate-50 p-10 md:p-16 lg:p-24 flex flex-col justify-center gap-10">
+                                <h3 class="text-xl font-black uppercase text-slate-900 tracking-widest">Контакты</h3>
+                                <div class="space-y-8">
+                                    <div class="flex items-center gap-6"><div class="bg-white w-14 h-14 flex-shrink-0 flex items-center justify-center rounded-2xl shadow-sm text-blue-600"><i data-lucide="map-pin"></i></div><span class="text-sm font-bold text-slate-600 uppercase" data-field="address" contenteditable="${isAdmin}">${d.address}</span></div>
+                                    <div class="flex items-center gap-6"><div class="bg-white w-14 h-14 flex-shrink-0 flex items-center justify-center rounded-2xl shadow-sm text-blue-600"><i data-lucide="phone"></i></div><span class="text-sm font-bold text-slate-600 uppercase" data-field="phone" contenteditable="${isAdmin}">${d.phone}</span></div>
+                                    <div class="flex items-center gap-6"><div class="bg-white w-14 h-14 flex-shrink-0 flex items-center justify-center rounded-2xl shadow-sm text-blue-600"><i data-lucide="mail"></i></div><span class="text-sm font-bold text-slate-600 uppercase" data-field="email" contenteditable="${isAdmin}">${d.email}</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>`
+        };
+
+        function renderMedia(src, cls) { if(!src) return `<div class="${cls} bg-slate-100"></div>`; return src.match(/\.(mp4|webm|ogg)$/i) ? `<video src="${src}" autoplay loop muted playsinline class="${cls}"></video>` : `<img src="${src}" class="${cls}">`; }
+        window.scrollCar = (id, dir) => { const c = document.getElementById('grid-'+id); if(c) c.scrollBy({ left: dir * 400, behavior: 'smooth' }); };
+
+        function renderBuilder() {
+            const c = document.getElementById('pageBuilder'); c.innerHTML = '';
+            siteData.sections.forEach((sec, idx) => {
+                const w = document.createElement('div'); w.className = 'builder-section relative group'; w.dataset.id = sec.id; w.dataset.type = sec.type;
+                let ctrls = isAdmin ? `<div class="section-controls absolute top-4 left-4 z-[45] bg-slate-900 text-white shadow-xl rounded-lg flex overflow-hidden text-[9px] font-black uppercase"><button onclick="moveSec(${idx},-1)" class="px-5 py-4 hover:bg-slate-800">Up</button><button onclick="moveSec(${idx},1)" class="px-5 py-4 hover:bg-slate-800 border-x border-white/10">Down</button><button onclick="delSec(${idx})" class="px-5 py-4 hover:bg-red-600 transition-colors">Del</button></div>` : '';
+                w.innerHTML = ctrls + templates[sec.type](sec); c.appendChild(w);
+            });
+            if(isAdmin) bindUploaders(); lucide.createIcons();
+            const obs = new IntersectionObserver((entries) => { entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('active'); }); }, { threshold: 0.1 });
+            document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+            startSliders();
+        }
+
+        window.sliderTimeouts = {};
+        function startSliders() { siteData.sections.forEach(sec => { if(sec.type === 'about') { const list = sec.mediaList && sec.mediaList.length > 0 ? sec.mediaList : ['']; playSlide(sec.id, list, 0); } }); }
+        function playSlide(secId, list, idx) {
+            const c = document.getElementById(`slider-container-${secId}`); if (!c) return;
+            clearTimeout(window.sliderTimeouts[secId]);
+            const src = list[idx] || ''; const isVid = src.match(/\.(mp4|webm|ogg)$/i);
+            const dots = `<div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3 z-20">${list.map((_, i) => `<div class="h-1.5 rounded-full transition-all duration-700 ${i === idx ? 'bg-orange-500 w-10' : 'bg-white/30 w-3'}"></div>`).join('')}</div>`;
+            if (isVid) { c.innerHTML = `<video src="${src}" autoplay muted playsinline class="w-full h-full object-cover animate-fade-in"></video>` + dots; const vid = c.querySelector('video'); vid.onended = () => playSlide(secId, list, (idx + 1) % list.length);
+            } else { c.innerHTML = `<img src="${src}" class="w-full h-full object-cover animate-fade-in">` + dots; window.sliderTimeouts[secId] = setTimeout(() => playSlide(secId, list, (idx + 1) % list.length), 5000); }
+        }
+
+        function openServiceDetails(secId, idx) { gatherData(); activeServiceSecId = secId; activeServiceIdx = idx; const item = siteData.sections.find(s => s.id === secId).items[idx]; document.getElementById('sdTitle').innerHTML = item.title; const cnt = document.getElementById('sdContent'); cnt.innerHTML = item.details || 'Пусто'; if (isAdmin) { cnt.contentEditable = true; document.getElementById('sdAdminHint').classList.remove('hidden'); } openModal('serviceDetailsModal'); }
+        function closeServiceDetails() { if (isAdmin && activeServiceSecId) { siteData.sections.find(s => s.id === activeServiceSecId).items[activeServiceIdx].details = document.getElementById('sdContent').innerHTML; } closeModal('serviceDetailsModal'); }
+
+        window.addSection = (type) => { gatherData(); const n = { id: 's_' + Date.now(), type: type, title: 'Заголовок' }; if(['problems','services','benefits','documents'].includes(type)) n.items=[]; if(type==='about') { n.stats=[]; n.mediaList=['']; } siteData.sections.push(n); renderBuilder(); };
+        window.moveSec = (idx, dir) => { if(idx+dir<0 || idx+dir>=siteData.sections.length) return; gatherData(); const t=siteData.sections[idx]; siteData.sections[idx]=siteData.sections[idx+dir]; siteData.sections[idx+dir]=t; renderBuilder(); };
+        window.delSec = (idx) => { if(confirm('Удалить блок?')){ gatherData(); siteData.sections.splice(idx,1); renderBuilder(); } };
+        
+        // ФУНКЦИИ ДОБАВЛЕНИЯ КАРТОЧЕК
+        window.addItem = (id) => { gatherData(); siteData.sections.find(s=>s.id===id).items.push({tag:'Тег', title:'Новый пункт', desc:'Описание проблемы', alert:'Важное уведомление'}); renderBuilder(); };
+        window.addItemService = (id) => { gatherData(); siteData.sections.find(s=>s.id===id).items.push({title:'Новая услуга', desc:'Краткое описание', media:'', details:'Детальный список'}); renderBuilder(); };
+        window.addItemBenefit = (id) => { gatherData(); siteData.sections.find(s=>s.id===id).items.push({icon:'check', title:'Новая выгода', desc:'Описание'}); renderBuilder(); };
+        window.addItemDoc = (id) => { gatherData(); siteData.sections.find(s=>s.id===id).items.push({media:'', title:'Название документа', desc:'Подпись'}); renderBuilder(); };
+        
+        window.addStat = (id) => { gatherData(); siteData.sections.find(s=>s.id===id).stats.push({num:'100', label:'Текст'}); renderBuilder(); };
+        window.addMediaAbout = (id) => { gatherData(); const s = siteData.sections.find(s=>s.id===id); if(!s.mediaList) s.mediaList=[]; s.mediaList.push(''); renderBuilder(); };
+        window.rmMediaAbout = (id, idx) => { gatherData(); siteData.sections.find(s=>s.id===id).mediaList.splice(idx,1); renderBuilder(); };
+        window.rmItem = (id, idx) => { gatherData(); siteData.sections.find(s=>s.id===id).items.splice(idx,1); renderBuilder(); };
+        window.rmStat = (id, idx) => { gatherData(); siteData.sections.find(s=>s.id===id).stats.splice(idx,1); renderBuilder(); };
+        window.chIcon = (id, idx) => { const ic = prompt('Иконка (check, zap, clock, banknote, star):','check'); if(ic){ gatherData(); siteData.sections.find(s=>s.id===id).items[idx].icon = ic; renderBuilder(); } };
+
+        function gatherData() {
+            const arr = [];
+            document.querySelectorAll('.builder-section').forEach(el => {
+                const d = { id: el.dataset.id, type: el.dataset.type };
+                el.querySelectorAll(':scope > section [data-field]').forEach(f => d[f.dataset.field] = f.innerHTML);
+                const m = el.querySelector(':scope > section [data-edit="media"]'); if (m) d.media = m.dataset.src;
+                const grid = el.querySelector('[id^="grid-"]');
+                if (grid) {
+                    if (d.type === 'about') { 
+                        d.stats = []; grid.querySelectorAll('[data-idx]').forEach(c => d.stats.push({ num: c.querySelector('[data-item="num"]').innerHTML, label: c.querySelector('[data-item="label"]').innerHTML })); 
+                        d.mediaList = []; el.querySelectorAll('[data-edit="media-arr"]').forEach(c => { if(c.dataset.src) d.mediaList.push(c.dataset.src); }); if(d.mediaList.length === 0) d.mediaList = [''];
+                    } else { 
+                        d.items = []; grid.querySelectorAll('[data-idx]').forEach(c => { 
+                            const obj = {}; const ic = c.querySelector('[data-icon]'); if(ic) obj.icon = ic.dataset.icon;
+                            const t = c.querySelector('[data-item="title"]'); if(t) obj.title = t.innerHTML;
+                            const desc = c.querySelector('[data-item="desc"]'); if(desc) obj.desc = desc.innerHTML;
+                            const tag = c.querySelector('[data-item="tag"]'); if(tag) obj.tag = tag.innerHTML;
+                            const alert = c.querySelector('[data-item="alert"]'); if(alert) obj.alert = alert.innerHTML;
+                            const m2 = c.querySelector('[data-edit="media"]'); if(m2) obj.media = m2.dataset.src;
+                            const det = c.querySelector('[data-item="details"]'); if(det) obj.details = det.innerHTML;
+                            d.items.push(obj); 
+                        }); 
+                    }
+                }
+                arr.push(d);
+            });
+            siteData.sections = arr;
+            document.querySelectorAll('nav [data-field], footer [data-field]').forEach(f => siteData[f.dataset.field] = f.innerHTML);
+            const logo = document.getElementById('navLogoImgContainer'); if(logo) siteData.navLogoImg = logo.dataset.src;
+        }
+
+        function bindUploaders() {
+            document.querySelectorAll('[data-edit^="media"]').forEach(el => {
+                const cl = el.cloneNode(true); el.parentNode.replaceChild(cl, el);
+                cl.addEventListener('click', (ev) => {
+                    ev.stopPropagation(); const link = prompt('Вставьте ссылку на медиа или оставьте пустым для выбора файла:'); if (link === null) return;
+                    const hUrl = (url) => { cl.dataset.src = url; if (cl.dataset.edit === 'media-arr') { gatherData(); renderBuilder(); } else if (cl.id === 'navLogoImgContainer') { cl.innerHTML = renderMedia(url, 'w-full h-full object-contain'); } else { cl.innerHTML = renderMedia(url, 'w-full h-full object-cover'); } };
+                    if (link.trim() !== '') { hUrl(link.trim()); return; }
+                    const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*, video/mp4';
+                    inp.onchange = async (e) => {
+                        const f = e.target.files[0]; if(!f) return; cl.style.opacity = '0.5'; const fd = new FormData(); fd.append('media', f);
+                        try { const res = await fetch('/api/upload', {method:'POST', body:fd}); const {url} = await res.json(); hUrl(url); } catch(e){ alert('Ошибка загрузки'); } finally { cl.style.opacity = '1'; }
+                    }; inp.click();
+                });
+            });
+            document.querySelectorAll('nav [data-field], footer [data-field]').forEach(f => f.contentEditable = true);
+        }
+
+        async function init() {
+            try {
+                const res = await fetch('/api/data'); siteData = await res.json(); if(!siteData.settings) siteData.settings = {};
+                document.querySelectorAll('nav [data-field], footer [data-field]').forEach(f => { if(siteData[f.dataset.field]) f.innerHTML = siteData[f.dataset.field] });
+                const lC = document.getElementById('navLogoImgContainer'); if (lC && siteData.navLogoImg) { lC.dataset.src = siteData.navLogoImg; lC.innerHTML = renderMedia(siteData.navLogoImg, 'w-full h-full object-contain'); }
+                const soc = document.getElementById('socialLinksContainer'); soc.innerHTML = '';
+                if (siteData.settings?.tgLink) soc.innerHTML += `<a href="${siteData.settings.tgLink}" target="_blank" class="text-blue-500 hover:scale-110 transition-all"><i data-lucide="send" class="w-5 h-5"></i></a>`;
+                if (siteData.settings?.waLink) soc.innerHTML += `<a href="${siteData.settings.waLink}" target="_blank" class="text-green-500 hover:scale-110 transition-all"><i data-lucide="message-circle" class="w-5 h-5"></i></a>`;
+                renderBuilder(); lucide.createIcons();
+                if (isAdmin && isAuth) {
+                    document.getElementById('privacyUpload').onchange = async (e) => {
+                        const f = e.target.files[0]; if(!f) return; const fd = new FormData(); fd.append('media', f);
+                        try { const res = await fetch('/api/upload', {method:'POST', body:fd}); const {url} = await res.json(); siteData.settings.privacyUrl = url; alert('Политика загружена'); } catch(e) { alert('Ошибка загрузки документа'); }
+                    };
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function openPrivacy() { if(siteData.settings.privacyUrl) { document.getElementById('privacyIframe').src = siteData.settings.privacyUrl; openModal('privacyModal'); } else alert('Файл политики конфиденциальности не загружен'); }
+        async function saveSettings() {
+            siteData.settings.telegramToken = document.getElementById('setTok').value; siteData.settings.telegramChatId = document.getElementById('setChat').value; 
+            siteData.settings.tgLink = document.getElementById('setTg').value; siteData.settings.waLink = document.getElementById('setWa').value; 
+            gatherData(); await fetch('/api/data', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(siteData) }); location.reload();
+        }
+
+        async function submitApp(e, src) {
+            e.preventDefault(); const form = e.target; const btn = form.querySelector('button'); const phone = form.querySelector('input').value;
+            btn.innerHTML = 'ОТПРАВКА...'; btn.disabled = true;
+            try { await fetch('/api/apply', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ source: src, phone: phone }) }); alert('✅ Заявка успешно отправлена!'); form.reset(); closeModal('applyModal');
+            } catch (err) { alert('❌ Ошибка отправки.'); } finally { btn.innerHTML = 'ОТПРАВИТЬ'; btn.disabled = false; }
+        }
+        init();
+    </script>
+</body>
+</html>
